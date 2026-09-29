@@ -1,138 +1,354 @@
-# Kirana Ledger That Listens — UdhaarBuddy
+<div align="center">
 
-> **# Vibe Coding Event 2026 — Day 1 (29th)**
-> **Problem Statement #1:** Kirana Ledger That Listens
-> **Target Persona:** Small Kirana Shop Owner
+# 🛒 UdhaarBuddy
 
----
+### _The Kirana Ledger That Listens_
 
-## Problem & Solution
+**Voice-first Digital Khata for small grocery shops**  
+_AI-powered credit ledger with automated, consent-gated recovery calls_
 
-**Problem:** A kirana shop owner needs to record credit (udhaar) and payments quickly — often while serving customers. They speak in mixed Hindi-English (Hinglish), will not fill out forms, and need a system that understands them and automates follow-up.
-
-> "Mohan ne 500 ka udhaar liya" → entry saved → automated consent-gated recovery call sent → customer replies with a button → dashboard updates live.
-
-### Constraint Addressed
-The owner writes and speaks in mixed Hindi and English (Hinglish), is usually busy serving a customer, and will not fill in forms. The system must accept **one-sentence voice or text input** and turn it into a clean ledger entry automatically.
+[![Node.js](https://img.shields.io/badge/Node.js-20%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Express](https://img.shields.io/badge/Express-4.x-000000?style=for-the-badge&logo=express)](https://expressjs.com/)
+[![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-111827?style=for-the-badge)](LICENSE)
+[![Built At](https://img.shields.io/badge/Built-Vibe%20Coding%20Event%202026-8E45F0?style=for-the-badge)](https://github.com/ajayXcode/kirana-stores)
 
 ---
 
-## Core AI Architecture
+</div>
 
-- **Model / Service:**  
-  The system uses a **rule-based Hinglish NLU parser** (`parser.js`) as the primary engine — no external LLM API required for core functionality. The parser handles:
-  - Hindi number words (e.g., `paanch sau` = 500, `dedh sau` = 150, `ek hazaar` = 1000)
-  - Devanagari numerals and number words (e.g., `५००`, `पांच सौ`)
-  - Mixed Hindi-English entity extraction (customer name, amount, item, quantity)
-  - Context memory for pronouns like "uska" / "usko" / "उसका" to auto-attributing to the last active customer
-
-  An optional **LLM fallback** (documented in PRD) can be added for sentences the rule engine cannot resolve, returning structured JSON.
-
-- **Workflow:**  
-  1. User taps mic or types a sentence in the browser (Web Speech API `hi-IN` / fallback text input)
-  2. Frontend sends text to `POST /api/parse`
-  3. `parseHinglishEntry()` extracts `{customer, type: credit|payment, amount, item, qty}` using regex rules + number-word mapping
-  4. If ambiguous (missing customer or amount), the parser returns clarification options → user picks via large buttons
-  5. On confirm, frontend `POST /api/entries` stores the immutable ledger row
-  6. For recovery: `POST /api/reminders/call` triggers Twilio Programmable Voice with a fixed Devanagari TTS script
-  7. Customer presses 1/2/3/0 on their phone keypad → webhook `POST /voice/response` logs the outcome
-  8. Dashboard polls `GET /api/stats` every 1.5s → live toast updates
-
-- **Error Handling:**  
-  - If customer or amount cannot be determined → **clarification prompt** with candidate buttons (never silently guesses)
-  - If the sentence is gibberish or unparseable → browser TTS says "Dobara boliye" (Please repeat)
-  - Pre-call guardrails block calls when: consent = NO, customer opted out, dispute open, or balance ≤ 0
-  - All ledger corrections create new rows (`amends_id`) with the original marked voided — **never deleted**, full audit trail preserved
+> _"Ek mic. Ek sentence. Ek call."_  
+> The shop owner says **"Mohan ne 500 ka udhaar liya"** → the ledger saves it → a polite automated call goes out → the customer presses **1** → the dashboard updates in real time.  
+> No forms. No app downloads. Just voice, trust, and technology that speaks the owner's language.
 
 ---
 
-## Features
+## Table of Contents
 
-### F1: One-Sentence Voice/Text Entry
-- Chrome Web Speech API (`hi-IN`) microphone capture
-- Type mode fallback (useful in noisy environments)
-- Quick demo preset buttons for instant testing
-- Context memory: "uska 200 jama ho gaya" attributes to last active customer (2-min idle expiry)
-- Tap-to-confirm card with browser Text-to-Speech readback (`speechSynthesis` `hi-IN`)
-
-### F2: Confidence & Clarification
-- Asks clarification questions when amount or customer is missing — **never silently guesses**
-- Handles gibberish gracefully (*"Dobara boliye"*)
-
-### F3: Customers + Derived Balance + Immutable Ledger
-- Balance = `sum(credit) - sum(payment)` — computed, never stored
-- Corrections = **new row** (`amends_id`), original marked voided — both visible in history
-- SQLite with WAL mode for performance
-
-### F4: Automated Twilio Voice Calls & Guardrails
-- **Pre-call checks (all must pass):** consent = YES, not opted out, no dispute open, balance > 0
-- Fixed Devanagari TTS script (Appendix A) — no free-form AI on calls
-- DTMF outcomes:
-  - `1` → Promised by tomorrow ✅
-  - `2` → Promised later ⏳
-  - `3` → Disputed — calls immediately halted, owner alerted ⚠️
-  - `0` → Opt-out — never called again 🚫
-
-### F5: Live Dashboard & Recovery Analytics
-- 1.5-second live polling with toast notifications
-- Stats: total udhaar, active debtors, promised/disputed/opted-out counts
-- Chart.js weekly recovery chart
-- Call log history with outcome tracking
-
-### F6: Demo Hygiene
-- Consent toggle for testing
-- One-click demo reset (`POST /api/reset`) — seeds Mohan (₹500), Sunita (₹150), Ramesh (owner)
-- In-app interactive IVR call modal simulator (press 1/2/3/0 in-browser)
-- No signup required — demo: `9876543210` / `1234`
+- [The Problem](#the-problem)
+- [Our Solution](#our-solution)
+- [Key Features](#key-features)
+- [AI & Architecture](#ai--architecture)
+- [Tech Stack](#tech-stack)
+- [Quick Start](#quick-start)
+- [Demo Flow](#demo-flow)
+- [API Reference](#api-reference)
+- [Data Safety & Ethics](#data-safety--ethics)
+- [Project Structure](#project-structure)
+- [Testing](#testing)
+- [Roadmap](#roadmap)
+- [Acknowledgements](#acknowledgements)
 
 ---
 
-## Prerequisites & Installation
+## The Problem
 
-### Requirements
-- **Node.js** v20+ (uses `node:sqlite` built-in module)
-- No external LLM API key required for demo (rule-based parser only)
-- Optional: Twilio account for real phone calls (demo uses browser simulator)
+India's 15 million kirana shops run on trust and memory. The owner keeps a rough notebook — "Mohan ne 500 rupaye liye, kal Dena padega" — but notebooks get lost, entries are forgotten, and asking for money back is awkward and personal.
 
-### Steps
+| Current Reality | The Cost |
+|---|---|
+| Paper ledger gets misplaced or wet | 💰 Money disappears down the drain |
+| Owner remembers "Mohan owed something" but not the exact amount | 🤯 Trust erodes over disputes |
+| Calling customers to remind feels uncomfortable and pushy | 😣 Relationships suffer |
+| Digital apps require English and complex forms | 🙅 Owners simply give up |
+
+---
+
+## Our Solution
+
+**UdhaarBuddy** replaces the paper ledger with a voice-first digital khata that understands **Hinglish** — the mix of Hindi and English that real kirana owners speak.
+
+<div align="center">
+
+```
+Owner speaks:  "Mohan ne 500 ka udhaar liya"
+                     │
+                     ▼
+       ┌───────────────────────────┐
+       │   Hinglish NLU Parser     │
+       │  {customer: Mohan,         │
+       │   type: credit,            │
+       │   amount: 500}             │
+       └───────────────────────────┘
+                     │
+                     ▼
+       ┌───────────────────────────┐
+       │  Immutable Ledger (SQLite) │
+       └───────────────────────────┘
+                     │
+                     ▼
+       ┌───────────────────────────┐
+       │  Automated IVR Call  📞   │
+       │  "1 = Kal tak denge"       │
+       │  "2 = Kuchh din baad"      │
+       │  "3 = Yeh hisaab galat"    │
+       │  "0 = Aage mat bulana"     │
+       └───────────────────────────┘
+                     │
+                     ▼
+       ┌───────────────────────────┐
+       │  Live Dashboard ✨         │
+       │  "Mohan ne kal tak vaada   │
+       │   kiya ✅"                  │
+       └───────────────────────────┘
+```
+
+</div>
+
+---
+
+## Key Features
+
+### 🎤 One-Sentence Entry
+Speak or type naturally in Hinglish. No forms, no dropdowns.
+
+> _"Mohan ne 3 kilo atta paanch sau ka udhaar liya"*  
+> → Entry saved in 3 seconds.
+
+- **Voice capture** via Web Speech API (`hi-IN`)
+- **Type mode** fallback for noisy environments
+- **Context memory**: "uska 200 jama ho gaya" auto-links to the last customer
+- **Sample buttons** for instant demo — no typing needed
+
+### 🤔 Confidence Before Commit
+Never silently guesses. When unsure:
+
+> *"Kitna Poocha? ₹200 ya ₹500?"* — large buttons for the owner to tap.
+
+### 📊 Immutable Ledger
+Every entry is a permanent record:
+
+- Corrections create **new rows** (`amends_id`) — originals are voided, never deleted
+- Balances = `sum(credit) − sum(payment)` — always accurate, always auditable
+- Full history with timestamps and raw text preserved
+
+### 📞 Consent-Gated Recovery Calls
+Polite, automated calls that respect the customer:
+
+| Press | Meaning | Result |
+|-------|---------|--------|
+| **1** | "Will pay tomorrow" | ✅ Promised — dashboard updated |
+| **2** | "Will pay in a few days" | ⏳ Promised later — dashboard updated |
+| **3** | "This isn't my bill" | ⚠️ Disputed — **calls stopped immediately** |
+| **0** | "Don't call me again" | 🚫 Opt-out — **permanently unsubscribed** |
+
+**Pre-call guardrails** — every call is blocked unless:
+- ✅ Customer consent = YES
+- ✅ Not opted out
+- ✅ No active dispute
+- ✅ Balance > ₹0
+
+### 📈 Live Dashboard
+1.5-second live polling with toast notifications:
+
+> _"Sunita ne kuch din baad dene ka vaada kiya"_ 💬
+
+Charts, KPIs, call logs, and customer cards — all updating in real time.
+
+### 🧪 Demo Ready
+No signup. No API keys. Just run and go:
+
+- **Demo login:** `9876543210` / `1234` (Ramesh Kirana Store)
+- Seeded customers: Mohan (₹500), Sunita (₹150)
+- Interactive IVR call simulator — press 1/2/3/0 right in the browser
+- One-click reset button to restore demo data
+
+---
+
+## AI & Architecture
+
+### Hinglish NLU Parser (`parser.js`)
+
+The parser is **rule-based** — no cloud LLM required for core functionality. It handles:
+
+| Capability | Examples |
+|------------|----------|
+| Hindi number words | `paanch sau` → 500, `dedh sau` → 150, `ek hazaar` → 1000 |
+| Devanagari digits | `५००` → 500, `दो सौ` → 200 |
+| Mixed language entities | `Mohan` / `मोहन` — customer, item, amount |
+| Quantity + item extraction | `3 kilo atta`, `2 packet chai` |
+| Context memory | `uska 200` → last active customer |
+| Garbage detection | `asdf qwer` → "Dobara boliye" |
+
+**Optional stretch**: An LLM JSON fallback can be wired in for sentences the rule engine cannot resolve — the parser returns clarification candidates instead of guessing.
+
+### System Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                Browser (Chrome)                         │
+│                                                            │
+│  🎙️ Web Speech API    │  📊 Chart.js    │  🔊 TTS     │
+│  (hi-IN, type mode)   │  Live Polling   │  (hi-IN)    │
+└──────────┬─────────────────────────────────┘
+           │
+           │  GET/POST /api/*  (JSON over HTTP)
+           │
+┌──────────▼─────────────────────────────────┐
+│                Express Server              │
+│                                              │
+│  /api/parse  →  parser.js (NLU)            │
+│  /api/entries → db.js (SQLite WAL)         │
+│  /api/reminders/call → Twilio Voice API    │
+│  /voice/answer → TwiML Generator           │
+│  /voice/response → DTMF Outcome Handler    │
+│  /api/stats → Aggregated Metrics           │
+└──────────┬─────────────────────────────────┘
+           │
+           │  SQL
+           ▼
+┌─────────────────────────────────────────────────────────┐
+│                SQLite (file-based, WAL mode)            │
+│  • users • customers • ledger_entries • call_logs       │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| **Frontend** | Plain HTML5 + CSS3 (custom properties) + vanilla JavaScript |
+| **Charts** | [Chart.js](https://www.chartjs.org/) |
+| **Voice Input** | Web Speech API (`hi-IN` locale) |
+| **Voice Output** | Web Speech API (`speechSynthesis`, `hi-IN`) |
+| **NLU** | Custom rule-based parser (`parser.js`) |
+| **Backend** | Node.js 20+ + Express 4.x |
+| **Database** | SQLite 3 (via `node:sqlite`, WAL mode) |
+| **SMS/Voice** | Twilio Programmable Voice + TwiML |
+| **Live Sync** | Server-side polling (1.5s) |
+| **Styling** | CSS custom properties, gradient text, glassmorphism cards |
+
+> **Why no React/Vue?** Kirana owners use old Android phones. A single `node server.js` with plain HTML runs anywhere, loads instantly, and requires zero build step.
+
+---
+
+## Quick Start
+
+### Prerequisites
+- Node.js v20+ (uses built-in `node:sqlite` module)
+- No API keys required for demo mode
+
+### One-Command Run
 
 ```bash
-# 1. Clone repository
+# Clone
 git clone https://github.com/ajayXcode/kirana-stores.git
 cd kirana-stores
 
-# 2. Install dependencies
+# Install
 npm install
 
-# 3. Environment variables
-# Copy the example env file:
+# (Optional) Set up environment
 cp .env.example .env
+# Edit .env: add TWILIO_ACCOUNT_SID / TWILIO_AUTH_TOKEN if using real calls
 
-# Edit .env and add your values:
-# PORT=3000                          (optional, defaults to 3000)
-# SHOP_NAME="Ramesh Kirana Store"    (optional, defaults to Ramesh Kirana Store)
-# TWILIO_ACCOUNT_SID=your_sid_here   (optional - demo mode works without it)
-# TWILIO_AUTH_TOKEN=your_token_here  (optional - demo mode works without it)
-# TWILIO_PHONE_NUMBER=+1234567890    (optional - demo mode works without it)
-# APP_BASE_URL=http://localhost:3000 (optional, used for Twilio webhooks)
-
-# 4. Run parser tests (verifies Hinglish parsing accuracy)
+# Run parser tests
 node test_parser.js
 
-# 5. Start the development server
-npm run dev
-# or for production:
+# Start the app
 npm start
-
-# 6. Open in your browser
-# Navigate to: http://localhost:3000
+# or: node server.js
 ```
 
-### Quick Start (No Installation Required)
-The app works out of the box with demo data:
-- **Landing Page:** `http://localhost:3000`
-- **Login Page:** `http://localhost:3000/login.html`
-- **Demo Login:** Phone: `9876543210` | Password: `1234`
+Open **[http://localhost:3000](http://localhost:3000)** → you're on the landing page.
+
+> **Demo credentials:** Phone `9876543210`, Password `1234`
+
+---
+
+## Demo Flow (3.5 minutes)
+
+### 🪙 Scenario 1: Record Credit & Recover
+
+1. **Speak:** _"Mohan ne 3 kilo atta paanch sau ka udhaar liya"_
+2. **Confirm card** slides up with parsed details
+3. **Tap** ✓ → browser reads back: _"Mohan ka paanch sau rupaye ka udhaar likh diya"_
+4. Balance: ₹500. Click **📞 Call** button.
+5. IVR modal opens — press **1** on the phone keypad.
+6. Dashboard toast: _"Mohan ne kal tak vaada kiya ✅"_
+
+### 💰 Scenario 2: Payment Received
+
+1. **Speak:** _"uska 200 jama ho gaya"_ (context memory auto-links to Mohan)
+2. Balance drops to ₹300
+3. Confirm + save
+
+### ⚠️ Scenario 3: Dispute (The Respectful Way)
+
+1. Click **📞 Call** for a customer
+2. Customer presses **3**
+3. Screen: _"DISPUTED — calls stopped for this customer"_
+4. Owner gets an alert. No more calls are ever made.
+5. The original ledger row is preserved for audit.
+
+### 🔄 Reset & Replay
+
+Click the **🔄 Reset Sample Data** button — the shop is restored to its initial state instantly.
+
+---
+
+## API Reference
+
+### Authentication
+
+| Method | Endpoint | Body |
+|--------|----------|------|
+| POST | `/api/auth/login` | `{ phone, password }` |
+| POST | `/api/auth/register` | `{ shop_name, owner_name, phone, password }` |
+| POST | `/api/auth/logout` | — |
+| GET | `/api/auth/me` | — |
+
+### Ledger
+
+| Method | Endpoint | Body |
+|--------|----------|------|
+| POST | `/api/parse` | `{ text, last_customer_id? }` |
+| POST | `/api/entries` | `{ customer_id, type, amount, item?, qty?, raw_text }` |
+| POST | `/api/entries/:id/void` | — |
+| POST | `/api/entries/amend` | `{ original_entry_id, ... }` |
+| GET | `/api/history` | `?customer_id=` |
+
+### Customers
+
+| Method | Endpoint | Body |
+|--------|----------|------|
+| GET | `/api/customers` | — |
+| POST | `/api/customers` | `{ name, phone? }` |
+| POST | `/api/customers/:id/toggle` | `{ consent?, disputed?, phone? }` |
+
+### Calls & Analytics
+
+| Method | Endpoint | Body |
+|--------|----------|------|
+| POST | `/api/reminders/call` | `{ customer_id, phone? }` |
+| GET | `/api/stats` | — |
+| POST | `/api/reset` | — |
+
+### Voice Webhooks
+
+| Method | Endpoint | Purpose |
+|--------|----------|---------|
+| ANY | `/voice/answer` | TwiML response (Appendix A script) |
+| ANY | `/voice/response` | DTMF outcome handler (1/2/3/0) |
+
+---
+
+## Data Safety & Ethics
+
+> _"We built a harassment tool? No. We built a tool that stops harassment."_
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Consent First** | Customer must explicitly opt in. No calls without consent. |
+| **Dispute = Stop** | Pressing 3 halts all calls immediately. Owner is alerted. |
+| **Opt-Out = Forever** | Pressing 0 adds the customer to a permanent do-not-call list. |
+| **Polite Script** | Fixed, non-threatening Devanagari TTS script. Never raises voice. |
+| **Immutable Audit** | No data is ever deleted. Corrections create new rows. |
+| **Calling Window** | Demo: hard-coded. Production: 09:00–19:00 IST, 3 attempts max. |
+| **No Recording** | Call audio is never recorded. Only digits + outcome are stored. |
+| **Transparent** | Script's first line always identifies the shop by name. |
 
 ---
 
@@ -140,111 +356,72 @@ The app works out of the box with demo data:
 
 ```
 kirana-stores/
-├── server.js              # Express server with all API routes
-├── db.js                  # SQLite schema, seed data, balance calculations
-├── parser.js              # Hinglish NLU parser (rules + number-word mapping)
-├── test_parser.js         # Parser test suite (Appendix B sentences)
+├── server.js                # Express server with all API + webhook routes
+├── db.js                    # SQLite schema, seed data, balance calc engine
+├── parser.js                # Hinglish NLU: number words, entity extraction
+├── test_parser.js           # 40+ test sentences (Appendix B coverage)
 ├── package.json
-├── .env.example           # Environment variable template
-├── 10-FINAL-PRD-hackathon.md   # Full PRD document
-├── udhar_buddy.db         # SQLite database (auto-created)
-└── public/
-    ├── landing.html       # Landing page with hero image & wavy scroll animation
-    ├── login.html         # Login / Register page
-    ├── index.html         # Main dashboard (authenticated)
-    ├── app.js             # Frontend: voice, parsing, dashboard, IVR simulator
-    ├── style.css          # Dashboard styling
-    ├── kirana_hero.jpg    # Kirana shop hero image
-    ├── landing_ref.png    # Landing page design reference
-    └── wave-hero.png      # Hero image for landing page
+├── .env.example             # Environment variable template
+├── 10-FINAL-PRD-hackathon.md   # Full product requirements document
+│
+├── public/
+│   ├── landing.html         # 🌊 Landing page (hero image + wavy scroll)
+│   ├── login.html           # 🔐 Login / Register (auth flow)
+│   ├── index.html           # 📊 Main dashboard (authenticated)
+│   ├── app.js               # Frontend: voice, parsing, live polling, IVR
+│   ├── style.css            # Dashboard theme & component styling
+│   └── assets/
+│       ├── kirana_hero.jpg      # Kirana shop reference photo
+│       ├── landing_ref.png      # Landing page design reference
+│       └── wave-hero.png        # Hero image with wave animation
+│
+└── udhar_buddy.db           # SQLite (auto-created on first run)
 ```
 
-### API Routes
-
-| Method   | Endpoint                          | Description                                  |
-|----------|-----------------------------------|----------------------------------------------|
-| POST     | `/api/auth/login`                 | Login with phone + password                  |
-| POST     | `/api/auth/register`              | Register new shop                            |
-| POST     | `/api/auth/logout`                | Logout (destroy session)                     |
-| GET      | `/api/auth/me`                    | Check session / get user info                |
-| POST     | `/api/parse`                      | Parse Hinglish text → structured entry       |
-| GET      | `/api/customers`                  | Get all customers with derived balances      |
-| POST     | `/api/customers`                  | Add new customer                             |
-| POST     | `/api/entries/:id/void`           | Void (cancel) a ledger entry                 |
-| POST     | `/api/entries`                    | Save new ledger entry                        |
-| POST     | `/api/entries/amend`              | Amend entry (void old + create new)          |
-| GET      | `/api/history`                    | Get ledger history (customer-specific or all)|
-| POST     | `/api/customers/:id/toggle`       | Toggle consent/disputed/phone                |
-| POST     | `/api/reminders/call`             | Trigger recovery call (demo or Twilio)       |
-| GET      | `/api/stats`                      | Dashboard stats + chart data                 |
-| POST     | `/api/reset`                      | Reset demo data (seed data)                  |
-
 ---
 
-## Tech Stack
-
-| Layer        | Choice                                         |
-|--------------|------------------------------------------------|
-| Frontend     | Plain HTML/CSS/JS + Web Speech API + Chart.js  |
-| Voice Input  | Web Speech API `hi-IN` (Chrome)                |
-| Voice Output | `speechSynthesis` (browser TTS, `hi-IN`)       |
-| NLU Parser   | Rule-based regex + Hindi number-word mapping   |
-| Backend      | Node.js + Express                              |
-| Database     | SQLite (built-in `node:sqlite`, WAL mode)      |
-| Calls        | Twilio Programmable Voice + TwiML              |
-| Live Updates | 1.5s polling                                   |
-| Deployment   | Single `node server.js` — no build step        |
-
----
-
-## Demo Story (3.5 min)
-
-| Step | Action | Fallback |
-|------|--------|----------|
-| 1 | Speak "Mohan ne 3 kilo atta paanch sau ka udhaar liya" → confirm card → tap → balance ₹500 | Pre-saved sentence button |
-| 2 | Speak "uska 200 jama ho gaya" (context memory) → balance ₹300 | Type mode |
-| 3 | Click reminder → call modal opens → simulate DTMF | Backup video |
-| 4 | Press `1` → dashboard toast "Mohan ne kal tak vaada kiya ✅" | Backup video |
-| 5 | Reset → call again → press `3` → **DISPUTED badge, calls stopped** | Backup video |
-| 6 | One line on consent, immutable ledger, roadmap | n/a |
-
----
-
-## Responsible AI / Safety Design
-
-| Guardrail | Demo View | Production |
-|-----------|-----------|------------|
-| **Consent** | Toggle "customer said YES" | SMS/WhatsApp opt-in, consent events stored |
-| **Dispute path** | Digit 3 → badge + calls stopped | Dispute list, owner-customer resolution |
-| **Opt-out** | Digit 0 | STOP/0 immediate, queued calls canceled |
-| **Automated disclosure** | Script first line | Same + shop name |
-| **Immutable ledger** | Amend = new row | Audit log, receipt hash |
-| **Fixed script** | No threats/shaming | Legal-reviewed script |
-| **Call limits** | Hardcoded constants | 09:00-19:00 IST, 3 attempts, 50/day/shop |
-| **No recording** | Digits + outcome only | Transcript only, recording off by default |
-
----
-
-## Parser Test Suite
+## Testing
 
 ```bash
+# Run parser test suite
 node test_parser.js
 ```
 
-Tests cover all Appendix B sentences including Hinglish number words, Devanagari digits, context memory pronouns, item+quantity extraction, and gibberish handling.
+Covers all Appendix B sentences: Hinglish numbers, Devanagari digits, context memory, quantity+item extraction, and graceful failure on gibberish.
 
 ---
 
-## Participant Info
+## Roadmap
 
-- **Name:** Ajay Yadav
-- **College ID:** [Your College ID]
-- **Day:** Day 1 (29th)
-- **Problem Statement:** #1 — Kirana Ledger That Listens
-- **Repository:** [github.com/ajayXcode/kirana-stores](https://github.com/ajayXcode/kirana-stores)
+| Priority | Feature |
+|----------|---------|
+| 🔴 Soon | Real SMS/WhatsApp consent flow before calls |
+| 🟡 Later | Offline-first PWA with on-device ASR |
+| 🟡 Later | UPI collect links in IVR script |
+| 🟢 Later | Multi-tenant with Row-Level Security |
+| 🟢 Later | Distributor credit visibility dashboard |
 
 ---
 
-## License
+## Acknowledgements
 
-MIT License — built for the Vibe Coding Event 2026.
+- **Twilio** — Programmable Voice API and TwiML
+- **Google Chrome** — Web Speech API (`hi-IN`) for voice recognition & synthesis
+- **Node.js team** — `node:sqlite` built-in module
+- **Chart.js** — Weekly recovery charts
+- The millions of kirana owners who make India's retail economy run every day
+
+---
+
+<div align="center">
+
+**Built with ❤️ for the Vibe Coding Event 2026 — Day 1 (29th September)**  
+_Problem Statement #1: Kirana Ledger That Listens_
+
+<a href="https://github.com/ajayXcode/kirana-stores">
+  <img src="https://img.shields.io/badge/GitHub-Code%20Repository-181718?style=for-the-badge&logo=github&logoColor=white" />
+</a>
+
+_Made by Ajay Yadav_
+
+</div>
