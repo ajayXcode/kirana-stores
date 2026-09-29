@@ -12,6 +12,7 @@ _AI-powered credit ledger with automated, consent-gated recovery calls_
 [![SQLite](https://img.shields.io/badge/SQLite-WAL-003B57?style=for-the-badge&logo=sqlite)](https://www.sqlite.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-111827?style=for-the-badge)](LICENSE)
 [![Built At](https://img.shields.io/badge/Built-Vibe%20Coding%20Event%202026-8E45F0?style=for-the-badge)](https://github.com/ajayXcode/kirana-stores)
+[![Vercel](https://img.shields.io/badge/Deployed%20on-Vercel-000000?style=for-the-badge&logo=vercel)](https://udhar-buddy.vercel.app)
 
 ---
 
@@ -252,7 +253,7 @@ npm start
 # or: node server.js
 ```
 
-Open **[http://localhost:3000](http://localhost:3000)** → you're on the landing page.
+Open **[https://udhar-buddy.vercel.app](https://udhar-buddy.vercel.app)** → you're on the landing page.
 
 > **Demo credentials:** Phone `9876543210`, Password `1234`
 
