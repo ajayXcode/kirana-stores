@@ -1,7 +1,9 @@
 const { DatabaseSync } = require('node:sqlite');
 const path = require('node:path');
 
-const DB_PATH = path.join(__dirname, 'udhar_buddy.db');
+// On Vercel, the filesystem is read-only except /tmp
+const DB_DIR = process.env.VERCEL || process.env.VERCEL_ENV ? '/tmp' : __dirname;
+const DB_PATH = path.join(DB_DIR, 'udhar_buddy.db');
 const db = new DatabaseSync(DB_PATH);
 
 // Enable WAL mode for high performance & foreign keys
