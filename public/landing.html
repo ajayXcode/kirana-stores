@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UdhaarBuddy • Voice-first Digital Khata for Grocery Shops</title>
+  <meta name="description" content="Ek mic ek sentence ek call - voice-first udhaar ledger with automated consent-gated recovery calls for kirana shops.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0B0F19;
+      --bg-card: #141B2D;
+      --bg-input: #1C253B;
+      --border: #28354F;
+      --border-focus: #3B82F6;
+      --text: #F1F5F9;
+      --muted: #94A3B8;
+      --primary: #3B82F6;
+      --primary-hover: #2563EB;
+      --success: #10B981;
+      --danger: #EF4444;
+      --radius: 18px;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      font-family: 'Geist', 'Noto Sans Devanagari', sans-serif;
+      color: var(--text);
+      overflow-x: hidden;
+    }
+
+    /* Animated background blobs */
+    .bg-blobs {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.15;
+      animation: float 8s ease-in-out infinite;
+    }
+    .blob-1 { width: 500px; height: 500px; background: #3B82F6; top: -150px; left: -100px; animation-delay: 0s; }
+    .blob-2 { width: 400px; height: 400px; background: #8B5CF6; bottom: -100px; right: -50px; animation-delay: 3s; }
+    .blob-3 { width: 300px; height: 300px; background: #10B981; top: 50%; left: 60%; animation-delay: 5s; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-30px) scale(1.05); }
+    }
+
+    /* Page wrapper */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+
+    /* Header */
+    .landing-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 2rem;
+    }
+    .landing-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 24px rgba(59,130,242,0.35);
+    }
+    .logo-icon svg { width: 20px; height: 20px; stroke: #fff; }
+    .logo-name {
+      font-size: 1.4rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #F1F5F9 0%, #94A3B8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .landing-header .lang-switch {
+      display: flex;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 2px;
+    }
+    .landing-header .lang-btn {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      font-family: inherit;
+      font-size: 0.78rem;
+      font-weight: 500;
+      padding: 0.4rem 1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .landing-header .lang-btn:hover { color: var(--text); }
+    .landing-header .lang-btn.active {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 3rem;
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(59,130,246,0.08);
+      min-height: 520px;
+    }
+
+    .hero-bg {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(11,15,25,0.95) 0%, rgba(20,27,45,0.9) 60%);
+      z-index: 1;
+    }
+
+    .hero-img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      animation: float-img 8s ease-in-out infinite;
+      opacity: 0.85;
+    }
+    @keyframes float-img {
+      0%, 100% { transform: translateY(0px) scale(1); opacity: 0.85; }
+      50% { transform: translateY(-10px) scale(1.03); opacity: 0.9; }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      max-width: 640px;
+      padding: 4rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .hero-title {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+    }
+    .hero-title .gradient-text {
+      background: linear-gradient(135deg, #3B82F6 0%, #8B5CF6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-title .highlight {
+      color: var(--success);
+    }
+
+    .hero-subtitle {
+      font-size: 1.05rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+    }
+    .btn-cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-family: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border-radius: 12px;
+      padding: 0.7rem 1.5rem;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary-cta {
+      background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(59,130,242,0.3);
+    }
+    .btn-primary-cta:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(59,130,242,0.4);
+    }
+    .btn-secondary-cta {
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary-cta:hover {
+      background: rgba(255,255,255,0.08);
+    }
+    .hero-footer {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.2);
+      color: var(--success);
+      padding: 0.2rem 0.6rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Features Section */
+    .features-section {
+      width: 100%;
+      max-width: 1200px;
+      margin-bottom: 3rem;
+    }
+    .section-title {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .section-title h2 { font-size: 1.5rem; font-weight: 700; }
+    .section-title p { color: var(--muted); font-size: 0.85rem; margin-top: 0.4rem; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.25rem;
+    }
+    .feature-card {
+      background: rgba(20, 27, 45, 0.7);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.2s;
+    }
+    .feature-card:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+    .feature-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(59,130,242,0.1);
+      border: 1px solid rgba(59,130,242,0.3);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .feature-icon svg { width: 22px; height: 22px; stroke: var(--primary); }
+    .feature-card h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: 0.4rem; }
+    .feature-card p { font-size: 0.82rem; color: var(--muted); line-height: 1.5; }
+
+    /* Scrolling Wavy Waves */
+    .wave-container {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      overflow: hidden;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .wave-container svg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 250%;
+      height: 100%;
+      fill: rgba(59, 130, 246, 0.06);
+      animation: scroll-wave 10s linear infinite;
+    }
+    .wave-container svg:nth-child(1) { animation-duration: 12s; animation-direction: normal; }
+    .wave-container svg:nth-child(2) { animation-duration: 18s; animation-direction: reverse; }
+    .wave-container svg:nth-child(3) { animation-duration: 14s; animation-direction: normal; opacity: 0.4; }
+    @keyframes scroll-wave {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+
+    /* Footer */
+    .landing-footer {
+      width: 100%;
+      max-width: 1200px;
+      text-align: center;
+      padding: 1.5rem 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+    .landing-footer span { color: var(--primary); }
+
+    @media (max-width: 768px) {
+      .hero-content { padding: 2.5rem 1.5rem; }
+      .hero-title { font-size: 1.9rem; }
+      .hero-cta { flex-direction: column; }
+      .landing-header { flex-wrap: wrap; gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background blobs -->
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="page-wrap">
+
+    <!-- Header -->
+    <header class="landing-header">
+      <div class="landing-logo">
+        <div class="logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" x2="12" y1="19" y2="22"/>
+          </svg>
+        </div>
+        <span class="logo-name">UdhaarBuddy</span>
+      </div>
+
+      <div class="lang-switch">
+        <button class="lang-btn active" onclick="setLang('en')">English</button>
+        <button class="lang-btn" onclick="setLang('hi')">हिन्दी</button>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-bg"></div>
+      <img src="wave-hero.png" alt="UdhaarBuddy Dashboard Preview" class="hero-img" />
+
+      <div class="hero-content">
+        <h1 class="hero-title">
+          <span class="gradient-text">Ek mic. Ek sentence.</span>
+          <span class="highlight">Ek call.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Voice-first Digital Khata for your grocery shop. Speak "Mohan ne 500 ka udhaar liya" → entry saved → automated consent-gated recovery call sent → customer replies with a button → dashboard updates live.
+        </p>
+
+        <div class="hero-cta">
+          <a href="/login.html" class="btn-cta btn-primary-cta">
+            🚀 Open My Shop Dashboard
+          </a>
+          <a href="#features" class="btn-cta btn-secondary-cta">
+            🎯 See How It Works
+          </a>
+        </div>
+
+        <div class="hero-footer">
+          <span class="trust-badge">✓ Demo Ready</span>
+          No signup needed — demo: 9876543210 / 1234
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+      <div class="section-title">
+        <h2>HOW UWDAARBUDDY WORKS</h2>
+        <p>Three simple steps to digitize your grocery shop's credit management</p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+              <line x1="12" x2="12" y1="19" y2="22"/>
+            </svg>
+          </div>
+          <h3>🎤 Speak or Type Entry</h3>
+          <p>Tap the mic and say "Mohan ne 500 ka udhaar liya" in normal Hindi or English. Or just type it. The app understands both.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" x2="8" y1="13" y2="13"/>
+              <line x1="16" x2="8" y1="17" y2="17"/>
+            </svg>
+          </div>
+          <h3>📊 Immutable Khata Book</h3>
+          <p>Every entry is saved with full audit trail. Corrections create new rows — nothing is ever deleted. Balances calculated automatically.</p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </div>
+          <h3>📞 Smart Recovery Calls</h3>
+          <p>Send polite automated calls to customers who owe money. They press 1/2 to promise payment, 3 for dispute, 0 to opt-out — all consent-gated and safe.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="landing-footer">
+      Made with ❤️ for Grocery Shop Owners • <span>UdhaarBuddy v1.0</span>
+    </footer>
+  </div>
+
+  <!-- Scrolling Wavy Waves -->
+  <div class="wave-container">
+    <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+      <path d="M321.39,56.44c58-10.77,137.41-18.32,213.51-18.32C666.76,38.12,820,50.6,900,58.16c80,.84,117-7.44,173-7.44,54,0,73.86,7.44,127,7.44V120H0V58.16C50,58.16,88.67,56.44,127,56.44c39.43,0,70.24,7.44,127,7.44,54,0,73.86-7.44,127-7.44S422.39,50.6,469.05,50.6,562.39,38.12,600,38.12Z"></path>
+    </svg>
+    <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+      <path d="M321.39,56.44c58-10.77,137.41-18.32,213.51-18.32C666.76,38.12,820,50.6,900,58.16c80,.84,117-7.44,173-7.44,54,0,73.86,7.44,127,7.44V120H0V58.16C50,58.16,88.67,56.44,127,56.44c39.43,0,70.24,7.44,127,7.44,54,0,73.86-7.44,127-7.44S422.39,50.6,469.05,50.6,562.39,38.12,600,38.12Z"></path>
+    </svg>
+    <svg viewBox="0 0 1200 120" preserveAspectRatio="none">
+      <path d="M321.39,56.44c58-10.77,137.41-18.32,213.51-18.32C666.76,38.12,820,50.6,900,58.16c80,.84,117-7.44,173-7.44,54,0,73.86,7.44,127,7.44V120H0V58.16C50,58.16,88.67,56.44,127,56.44c39.43,0,70.24,7.44,127,7.44,54,0,73.86-7.44,127-7.44S422.39,50.6,469.05,50.6,562.39,38.12,600,38.12Z"></path>
+    </svg>
+  </div>
+
+  <script>
+    function setLang(lang) {
+      document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.toggle('active', btn.textContent.includes(lang === 'en' ? 'English' : 'हिन्दी')));
+
+      const content = {
+        en: {
+          title1: "Ek mic. Ek sentence. Ek call.",
+          subtitle: "Voice-first Digital Khata for your grocery shop. Speak \"Mohan ne 500 ka udhaar liya\" \u2192 entry saved \u2192 automated consent-gated recovery call sent \u2192 customer replies with a button \u2192 dashboard updates live.",
+          cta: "Open My Shop Dashboard",
+          featuresTitle: "HOW UWDAARBUDDY WORKS",
+          featuresSubtitle: "Three simple steps to digitize your grocery shop's credit management",
+          f1: "Speak or Type Entry",
+          f1d: "Tap the mic and say \"Mohan ne 500 ka udhaar liya\" in normal Hindi or English. Or just type it. The app understands both.",
+          f2: "Immutable Khata Book",
+          f2d: "Every entry is saved with full audit trail. Corrections create new rows \u2014 nothing is ever deleted. Balances calculated automatically.",
+          f3: "Smart Recovery Calls",
+          f3d: "Send polite automated calls to customers who owe money. They press 1/2 to promise payment, 3 for dispute, 0 to opt-out \u2014 all consent-gated and safe.",
+          trust: "Demo Ready",
+          trustSub: "No signup needed \u2014 demo: 9876543210 / 1234"
+        },
+        hi: {
+          title1: "\u090Fक \u092E\u093F\u0925। \u090Fक \u0935\u093E\u0915\u094D\u092F\u0935\u0924\u094D\u0924\u093F\u0915\u094D\u0930 \u0935\u093E\u0915\u094D\u092F\u0935\u094D\u0930 \u092A\u093E\u0922\u093C।",
+          subtitle: "\u0905पन ग्रोसरी दुकान के लिए वॉइस-फर्स्ट डिजिटल खाता। कहें \"मोहन ने 500 का उधार लिया\" \u2192 एंट्री बचता है \u2192 स्वचालित सहमति-आधारित रीकवरी कॉल भेजी जाती है \u2192 ग्राहक बटन दबाता है \u2192 डैशबोर्ड लाइव अपडेट होता है।",
+          cta: "\u092Eेरा दुकान डैशबोर्ड खोलें",
+          featuresTitle: "उधर बड़ी कैसे काम करता है",
+          featuresSubtitle: "आपकी किराना दुकान के क्रेडिट प्रबंधन के लिए तीन सरल कदम",
+          f1: "\u092Aढ्रा की में या लिखें एंट्री",
+          f1d: "\u092Eाइक्रो दबाएं और कहें \"मोहन ने 500 का उधार लिया\" सामान्य हिंदी या अंग्रेजी में। या बस टाइप करें। ऐप दोनों को समझता है।",
+          f2: "\u0905परिवर्तनीय खाता बही",
+          f2d: "हर एंट्री पूरे ऑडिट ट्रेल के साथ सहेजी जाती है। संशोधन नई पंक्ति बनाता है \u2014 कुछ भी हटाया नहीं जाता। संतुलन स्वचालित रूप से गणना किया जाता है।",
+          f3: "\u0938्मार्ट रिकवरी कॉल",
+          f3d: "\u091Cोसकर कॉल भेजें जो पैसा लेकर हैं। वे 1/2 दबाकर भुगतान का वादा करते हैं, 3 विवाद के लिए, 0 अप्ट-आउट \u2014 सभी सहमति-आधारित और सुरक्षित।",
+          trust: "\u0921ेमो तैयार",
+          trustSub: "कोई साइनअप नहीं चाहिए \u2014 डेमो: 9876543210 / 1234"
+        }
+      };
+
+      const c = content[lang];
+      const t1 = document.querySelector('.hero-title');
+      t1.innerHTML = '<span class="gradient-text">' + (lang === 'en' ? "Ek mic. Ek sentence." : content.hi.title1.split('\u0926\u093F\u0915\u094D\u0924\u093f")[0] || "Ek mic. Ek sentence.") + '</span> <span class="highlight">' + (lang === 'en' ? "Ek call." : "Ek call.") + '</span>';
+
+      const els = {
+        '.hero-subtitle': c.subtitle,
+        '.btn-primary-cta': c.cta,
+        '.features-title': c.featuresTitle,
+        '.features-subtitle': c.featuresSubtitle,
+        '.feature-1 h3': lang === 'en' ? "🎤 Speak or Type Entry" : "🎤 पढ़ें या लिखें एंट्री",
+        '.feature-1 p': lang === 'en' ? "Tap the mic and say \"Mohan ne 500 ka udhaar liya\" in normal Hindi or English. Or just type it. The app understands both." : "माइक्रो दबाएं और कहें \"मोहन ने 500 का उधार लिया\" सामान्य हिंदी या अंग्रेजी में। या बस टाइप करें। ऐप दोनों को समझता है।",
+        '.feature-2 h3': lang === 'en' ? "📊 Immutable Khata Book" : "📊 अपरिवर्तनीय खाता बही",
+        '.feature-2 p': lang === 'en' ? "Every entry is saved with full audit trail. Corrections create new rows — nothing is ever deleted. Balances calculated automatically." : "हर एंट्री पूरे ऑडिट ट्रेल के साथ सहेजी जाती है। संशोधन नई पंक्ति बनाता है — कुछ भी हटाया नहीं जाता। संतुलन स्वचालित रूप से गणना किया जाता है।",
+        '.feature-3 h3': lang === 'en' ? "📞 Smart Recovery Calls" : "📞 स्मार्ट रिकवरी कॉल",
+        '.feature-3 p': lang === 'en' ? "Send polite automated calls to customers who owe money. They press 1/2 to promise payment, 3 for dispute, 0 to opt-out — all consent-gated and safe." : "जो पैसा लेकर हैं उन्हें स्मरण कॉल भेजें। वे 1/2 दबाकर भुगतान का वादा करते हैं, 3 विवाद के लिए, 0 अप्ट-आउट — सभी सहमति-आधारित और सुरक्षित।",
+        '.trust-badge': c.trust,
+        '.landing-footer span': lang === 'en' ? "UdhaarBuddy v1.0" : "उधार बड़ी v1.0"
+      };
+
+      Object.entries(els).forEach(([sel, val]) => {
+        const el = document.querySelector(sel);
+        if (el && val !== undefined) el.textContent = val;
+      });
+
+      const footerNote = document.querySelector('.hero-footer');
+      footerNote.innerHTML = '<span class="trust-badge">' + c.trust + '</span> ' + c.trustSub;
+    }
+  </script>
+</body>
+</html>
