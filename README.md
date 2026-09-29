@@ -424,4 +424,11 @@ _Problem Statement #1: Kirana Ledger That Listens_
 
 _Made by Ajay Yadav_
 
+---
+
+## Participant Info
+- **Name:** Ajay Yadav
+- **College ID:** ajay.r.yadav25@slrtce.in
+- **Day:** Day 1 (29th)
+
 </div>
